@@ -58,7 +58,11 @@
           "buildTarget": "fe:build:development"
         }
       },
-      "defaultConfiguration": "development"
+      "defaultConfiguration": "development",
+      "dependsOn": ["backend:serve"],
+      "options": {
+        "proxyConfig": "apps/fe/proxy.conf.json"
+      }
     },
     "extract-i18n": {
       "executor": "@angular/build:extract-i18n",
