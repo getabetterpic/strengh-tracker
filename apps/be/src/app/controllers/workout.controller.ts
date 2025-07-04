@@ -1,8 +1,8 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus } from '@nestjs/common';
 import { WorkoutService } from '../services/workout.service';
-import { Workout, Exercise, Set } from '../models/workout.model';
+import { Workout, Exercise, Set } from '@strength-tracker/util';
 
-@Controller('api/workouts')
+@Controller('workouts')
 export class WorkoutController {
   constructor(private readonly workoutService: WorkoutService) {}
 

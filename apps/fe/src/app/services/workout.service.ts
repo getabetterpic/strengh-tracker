@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Workout, Exercise, Set } from '../models/workout.model';
+import { Workout, Exercise, Set } from '@strength-tracker/util';
 
 @Injectable({
   providedIn: 'root'

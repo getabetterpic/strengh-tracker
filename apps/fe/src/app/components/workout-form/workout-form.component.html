@@ -1,0 +1,253 @@
+<div class="container mx-auto p-4 max-w-4xl">
+  <div class="mb-6 border-b pb-4">
+    <h1 class="text-2xl font-bold text-blue-700">{{ isEditMode ? 'Edit Workout' : 'Create Workout' }}</h1>
+    <p class="text-gray-500 mt-1">Fill in the details below to {{ isEditMode ? 'update your' : 'create a new' }} workout</p>
+  </div>
+
+  <form [formGroup]="workoutForm" (ngSubmit)="onSubmit()" class="space-y-8">
+    <div class="bg-white rounded-lg shadow-sm p-6 space-y-6">
+      <h2 class="text-lg font-semibold text-gray-800 border-b pb-2">Basic Information</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Workout Name <span class="text-red-500">*</span></label>
+          <input
+            type="text"
+            id="name"
+            formControlName="name"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            placeholder="e.g., Upper Body, Leg Day, etc."
+          >
+          <div *ngIf="workoutForm.get('name')?.invalid && workoutForm.get('name')?.touched" class="text-red-500 text-sm mt-1">
+            Workout name is required
+          </div>
+        </div>
+
+        <div>
+          <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Date <span class="text-red-500">*</span></label>
+          <input
+            type="date"
+            id="date"
+            formControlName="date"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+          >
+          <div *ngIf="workoutForm.get('date')?.invalid && workoutForm.get('date')?.touched" class="text-red-500 text-sm mt-1">
+            Date is required
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
+        <textarea
+          id="notes"
+          formControlName="notes"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+          rows="3"
+          placeholder="Any notes about this workout..."
+        ></textarea>
+      </div>
+
+      <div class="mt-6">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <div class="flex justify-between items-center mb-4 border-b pb-2">
+            <h2 class="text-lg font-semibold text-gray-800">Exercises</h2>
+            <button
+              type="button"
+              (click)="addExercise()"
+              class="flex items-center gap-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              Add Exercise
+            </button>
+          </div>
+
+          <div formArrayName="exercises" class="space-y-6">
+            <div *ngFor="let exercise of exercisesFormArray.controls; let i = index" [formGroupName]="i"
+                 class="border border-gray-200 rounded-lg p-5 bg-gray-50 hover:shadow-md transition-all">
+              <div class="flex justify-between items-center mb-4 pb-2 border-b border-gray-200">
+                <h3 class="font-medium text-blue-700 flex items-center">
+                  <span class="bg-blue-100 text-blue-700 rounded-full w-6 h-6 inline-flex items-center justify-center mr-2">{{ i + 1 }}</span>
+                  Exercise
+                </h3>
+                <button
+                  type="button"
+                  (click)="removeExercise(i)"
+                  class="text-red-500 hover:text-red-700 text-sm flex items-center gap-1"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Remove
+                </button>
+              </div>
+
+              <div class="mb-4">
+                <label [for]="'exercise-name-' + i" class="block text-sm font-medium text-gray-700 mb-1">Exercise Name <span class="text-red-500">*</span></label>
+                <input
+                  [id]="'exercise-name-' + i"
+                  type="text"
+                  formControlName="name"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  placeholder="e.g., Bench Press, Squat, etc."
+                >
+                <div *ngIf="exercise.get('name')?.invalid && exercise.get('name')?.touched" class="text-red-500 text-sm mt-1">
+                  Exercise name is required
+                </div>
+              </div>
+
+              <div class="mt-4 bg-white p-4 rounded-lg border border-gray-200">
+                <div class="flex justify-between items-center mb-3">
+                  <h4 class="text-sm font-medium text-gray-700">Sets</h4>
+                  <button
+                    type="button"
+                    (click)="addSet(i)"
+                    class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs flex items-center gap-1 transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Set
+                  </button>
+                </div>
+
+                <div formArrayName="sets">
+                  <div *ngIf="getSetsFormArray(i).controls.length === 0" class="text-center py-4 bg-gray-50 rounded-lg">
+                    <p class="text-gray-500 text-sm mb-2">No sets added yet</p>
+                    <button
+                      type="button"
+                      (click)="addSet(i)"
+                      class="text-green-600 hover:text-green-700 text-sm"
+                    >
+                      Add your first set
+                    </button>
+                  </div>
+
+                  <div *ngIf="getSetsFormArray(i).controls.length > 0" class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                      <thead>
+                        <tr class="bg-gray-50">
+                          <th class="text-left py-2 px-2 rounded-tl-lg">#</th>
+                          <th class="text-left py-2 px-2">Reps</th>
+                          <th class="text-left py-2 px-2">Weight</th>
+                          <th class="text-left py-2 px-2">Completed</th>
+                          <th class="text-right py-2 px-2 rounded-tr-lg">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let set of getSetsFormArray(i).controls; let j = index" [formGroupName]="j"
+                            class="border-t border-gray-200 hover:bg-gray-50 transition-colors">
+                          <td class="py-3 px-2">
+                            <span class="font-medium">{{ j + 1 }}</span>
+                          </td>
+                          <td class="py-3 px-2">
+                            <input
+                              type="number"
+                              formControlName="reps"
+                              class="w-20 px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                              min="1"
+                              placeholder="Reps"
+                            >
+                          </td>
+                          <td class="py-3 px-2">
+                            <div class="flex items-center">
+                              <input
+                                type="number"
+                                formControlName="weight"
+                                class="w-20 px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                min="0"
+                                step="0.5"
+                                placeholder="Weight"
+                              >
+                              <span class="ml-1 text-gray-500">kg</span>
+                            </div>
+                          </td>
+                          <td class="py-3 px-2">
+                            <label class="inline-flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                formControlName="completed"
+                                class="h-4 w-4 text-blue-600 rounded focus:ring-blue-500 transition-colors"
+                              >
+                              <span class="ml-2 text-sm text-gray-700">Done</span>
+                            </label>
+                          </td>
+                          <td class="py-3 px-2 text-right">
+                            <button
+                              type="button"
+                              (click)="removeSet(i, j)"
+                              class="text-red-500 hover:text-red-700 text-xs inline-flex items-center gap-1"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              Remove
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="exercisesFormArray.controls.length === 0" class="text-center py-8 bg-gray-50 rounded-lg mt-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <p class="text-gray-500 mb-3">No exercises added yet</p>
+            <button
+              type="button"
+              (click)="addExercise()"
+              class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors"
+            >
+              Add Your First Exercise
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 bg-white rounded-lg shadow-sm p-6">
+        <div class="flex items-center">
+          <input
+            type="checkbox"
+            id="completed"
+            formControlName="completed"
+            class="h-5 w-5 text-green-600 rounded focus:ring-green-500 transition-colors"
+          >
+          <label for="completed" class="ml-2 block text-sm text-gray-700">
+            Mark workout as completed
+            <span class="text-gray-500 text-xs block mt-0.5">Check this if you've finished all exercises in this workout</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-between pt-6 border-t mt-8">
+      <button
+        type="button"
+        (click)="goBack()"
+        class="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Cancel
+      </button>
+      <button
+        type="submit"
+        [disabled]="workoutForm.invalid"
+        class="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+      >
+        {{ isEditMode ? 'Update' : 'Create' }} Workout
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+    </div>
+  </form>
+</div>

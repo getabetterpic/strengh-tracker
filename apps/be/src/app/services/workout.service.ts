@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Workout, Exercise, Set } from '../models/workout.model';
+import { Workout, Exercise, Set } from '@strength-tracker/util';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -10,7 +10,7 @@ export class WorkoutService {
     return this.workouts;
   }
 
-  getWorkoutById(id: string): Workout {
+  getWorkoutById(id: string): Workout | null | undefined {
     return this.workouts.find(workout => workout.id === id);
   }
 
@@ -23,7 +23,7 @@ export class WorkoutService {
     return newWorkout;
   }
 
-  updateWorkout(id: string, workoutData: Partial<Workout>): Workout {
+  updateWorkout(id: string, workoutData: Partial<Workout>): Workout | null {
     const workoutIndex = this.workouts.findIndex(workout => workout.id === id);
     if (workoutIndex === -1) {
       return null;
@@ -44,7 +44,7 @@ export class WorkoutService {
   }
 
   // Exercise operations
-  addExerciseToWorkout(workoutId: string, exerciseData: Omit<Exercise, 'id'>): Workout {
+  addExerciseToWorkout(workoutId: string, exerciseData: Omit<Exercise, 'id'>): Workout | null {
     const workout = this.getWorkoutById(workoutId);
     if (!workout) {
       return null;
@@ -59,7 +59,7 @@ export class WorkoutService {
     return workout;
   }
 
-  updateExercise(workoutId: string, exerciseId: string, exerciseData: Partial<Exercise>): Workout {
+  updateExercise(workoutId: string, exerciseId: string, exerciseData: Partial<Exercise>): Workout | null {
     const workout = this.getWorkoutById(workoutId);
     if (!workout) {
       return null;
@@ -78,7 +78,7 @@ export class WorkoutService {
     return workout;
   }
 
-  deleteExercise(workoutId: string, exerciseId: string): Workout {
+  deleteExercise(workoutId: string, exerciseId: string): Workout | null {
     const workout = this.getWorkoutById(workoutId);
     if (!workout) {
       return null;
@@ -89,7 +89,7 @@ export class WorkoutService {
   }
 
   // Set operations
-  addSetToExercise(workoutId: string, exerciseId: string, setData: Set): Workout {
+  addSetToExercise(workoutId: string, exerciseId: string, setData: Set): Workout | null {
     const workout = this.getWorkoutById(workoutId);
     if (!workout) {
       return null;
@@ -104,7 +104,7 @@ export class WorkoutService {
     return workout;
   }
 
-  updateSet(workoutId: string, exerciseId: string, setIndex: number, setData: Partial<Set>): Workout {
+  updateSet(workoutId: string, exerciseId: string, setIndex: number, setData: Partial<Set>): Workout | null {
     const workout = this.getWorkoutById(workoutId);
     if (!workout) {
       return null;
@@ -123,7 +123,7 @@ export class WorkoutService {
     return workout;
   }
 
-  deleteSet(workoutId: string, exerciseId: string, setIndex: number): Workout {
+  deleteSet(workoutId: string, exerciseId: string, setIndex: number): Workout | null {
     const workout = this.getWorkoutById(workoutId);
     if (!workout) {
       return null;
