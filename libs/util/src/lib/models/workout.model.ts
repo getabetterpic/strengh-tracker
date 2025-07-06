@@ -2,6 +2,7 @@ export interface Exercise {
   id: string;
   name: string;
   sets: Set[];
+  workoutId: string;
 }
 
 export interface Set {
@@ -12,9 +13,9 @@ export interface Set {
 
 export interface Workout {
   id: string;
-  date: Date;
+  date: string;
   name: string;
   exercises: Exercise[];
   notes?: string;
-  completed: boolean;
+  completedAt: string;
 }

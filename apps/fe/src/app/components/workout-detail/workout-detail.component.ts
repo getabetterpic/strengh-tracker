@@ -2,19 +2,17 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { WorkoutService } from '../../services/workout.service';
-import { Workout } from '@strength-tracker/util';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { Exercise, Workout } from '@strength-tracker/util';
+import { toSignal } from '@angular/core/rxjs-interop';
 import {
   BehaviorSubject,
   catchError,
   combineLatest,
   finalize,
-  from,
   of,
   shareReplay,
   switchMap,
   tap,
-  throwError,
 } from 'rxjs';
 
 @Component({
@@ -35,24 +33,32 @@ export class WorkoutDetailComponent {
     this.updateWorkoutTrigger$,
   ]).pipe(
     tap(() => this.loading.set(true)),
+    tap(() => {
+      console.log('workout triggered...');
+    }),
     switchMap(([params]) =>
-      this.workoutService
-        .getWorkoutById(params.get('id') || '')
-        .pipe(finalize(() => this.loading.set(false)))
+      this.workoutService.getWorkoutById(params.get('id') ?? '').pipe(
+        tap(console.log),
+        finalize(() => this.loading.set(false))
+      )
     ),
     catchError((error) => {
       console.error('Error loading workout', error);
       this.loading.set(false);
       this.router.navigate(['/workouts']);
-      return of({} as Workout);
+      return of({ exercises: [] as Exercise[] } as Workout);
     }),
     shareReplay(1)
   );
-  workout = toSignal(this.workout$, { initialValue: {} as Workout });
+  workout = toSignal(this.workout$, {
+    initialValue: { exercises: [] as Exercise[] } as Workout,
+  });
 
   markAsCompleted(): void {
     this.workoutService
-      .updateWorkout(this.workout().id, { completed: true })
+      .updateWorkout(this.workout().id, {
+        completedAt: new Date().toISOString(),
+      })
       .subscribe({
         next: () => {
           this.updateWorkoutTrigger$.next();

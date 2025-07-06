@@ -1,117 +1,141 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Workout, Exercise, Set } from '@strength-tracker/util';
-import { v4 as uuidv4 } from 'uuid';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { DATABASE, workouts, exercises } from '@strength-tracker/db';
+import { eq } from 'drizzle-orm';
 
 @Injectable()
 export class WorkoutService {
   private workouts: Workout[] = [];
 
-  getAllWorkouts(): Workout[] {
-    return this.workouts;
+  constructor(@Inject(DATABASE) private db: NodePgDatabase) {}
+
+  async getAllWorkouts() {
+    const rows = await this.db
+      .select({
+        workout: workouts,
+        exercise: exercises,
+      })
+      .from(workouts)
+      .leftJoin(exercises, eq(workouts.id, exercises.workoutId));
+    return this.combineWorkoutsAndExercises(rows);
   }
 
-  getWorkoutById(id: string): Workout | null | undefined {
-    return this.workouts.find(workout => workout.id === id);
+  async getWorkoutById(id: string) {
+    const rows = await this.db
+      .select({
+        workout: workouts,
+        exercise: exercises,
+      })
+      .from(workouts)
+      .leftJoin(exercises, eq(workouts.id, exercises.workoutId))
+      .where(eq(workouts.id, parseInt(id, 10)));
+    return this.combineWorkoutsAndExercises(rows);
   }
 
-  createWorkout(workoutData: Omit<Workout, 'id'>): Workout {
-    const newWorkout: Workout = {
-      ...workoutData,
-      id: uuidv4(),
-    };
-    this.workouts.push(newWorkout);
-    return newWorkout;
+  async createWorkout(workoutData: Omit<Workout, 'id'>) {
+    return this.db.insert(workouts).values(workoutData).returning({
+      resourceId: workouts.resourceId,
+    });
   }
 
-  updateWorkout(id: string, workoutData: Partial<Workout>): Workout | null {
-    const workoutIndex = this.workouts.findIndex(workout => workout.id === id);
-    if (workoutIndex === -1) {
-      return null;
-    }
+  async updateWorkout(workoutId: string, workoutData: Partial<Workout>) {
+    const {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      id: _,
+      exercises: workoutExercises,
+      ...remainingData
+    } = workoutData;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const toInsert = (workoutExercises ?? []).map(({ id, ...exercise }) => ({
+      ...exercise,
+      workoutId: parseInt(workoutId),
+    }));
 
-    this.workouts[workoutIndex] = {
-      ...this.workouts[workoutIndex],
-      ...workoutData,
-    };
+    return this.db.transaction(async (tx) => {
+      if (toInsert.length) {
+        await tx
+          .delete(exercises)
+          .where(eq(exercises.workoutId, parseInt(workoutId)));
+        await tx.insert(exercises).values(toInsert);
+      }
 
-    return this.workouts[workoutIndex];
+      return tx
+        .update(workouts)
+        .set(remainingData)
+        .where(eq(workouts.id, parseInt(workoutId)))
+        .returning({
+          resourceId: workouts.resourceId,
+        });
+    });
   }
 
-  deleteWorkout(id: string): boolean {
-    const initialLength = this.workouts.length;
-    this.workouts = this.workouts.filter(workout => workout.id !== id);
-    return initialLength !== this.workouts.length;
+  async deleteWorkout(id: string) {
+    return this.db
+      .delete(workouts)
+      .where(eq(workouts.id, parseInt(id)))
+      .returning({ resourceId: workouts.resourceId });
   }
 
   // Exercise operations
-  addExerciseToWorkout(workoutId: string, exerciseData: Omit<Exercise, 'id'>): Workout | null {
-    const workout = this.getWorkoutById(workoutId);
-    if (!workout) {
-      return null;
-    }
-
-    const newExercise: Exercise = {
-      ...exerciseData,
-      id: uuidv4(),
-    };
-
-    workout.exercises.push(newExercise);
-    return workout;
+  async addExerciseToWorkout(
+    workoutId: string,
+    exerciseData: Omit<Exercise, 'id'>
+  ) {
+    return this.db
+      .insert(exercises)
+      .values({ ...exerciseData, workoutId: parseInt(workoutId) })
+      .returning({ resourceId: exercises.resourceId });
   }
 
-  updateExercise(workoutId: string, exerciseId: string, exerciseData: Partial<Exercise>): Workout | null {
-    const workout = this.getWorkoutById(workoutId);
-    if (!workout) {
-      return null;
-    }
-
-    const exerciseIndex = workout.exercises.findIndex(exercise => exercise.id === exerciseId);
-    if (exerciseIndex === -1) {
-      return null;
-    }
-
-    workout.exercises[exerciseIndex] = {
-      ...workout.exercises[exerciseIndex],
-      ...exerciseData,
-    };
-
-    return workout;
+  async updateExercise(
+    workoutId: string,
+    exerciseId: string,
+    exerciseData: Omit<Partial<Exercise>, 'id' | 'workoutId'>
+  ) {
+    return this.db
+      .update(exercises)
+      .set(exerciseData)
+      .where(eq(exercises.id, parseInt(exerciseId, 10)))
+      .returning({ resourceId: exercises.resourceId });
   }
 
-  deleteExercise(workoutId: string, exerciseId: string): Workout | null {
-    const workout = this.getWorkoutById(workoutId);
-    if (!workout) {
-      return null;
-    }
-
-    workout.exercises = workout.exercises.filter(exercise => exercise.id !== exerciseId);
-    return workout;
+  deleteExercise(workoutId: string, exerciseId: string) {
+    return this.db
+      .delete(exercises)
+      .where(eq(exercises.id, parseInt(exerciseId)))
+      .returning({ resourceId: exercises.resourceId });
   }
 
   // Set operations
-  addSetToExercise(workoutId: string, exerciseId: string, setData: Set): Workout | null {
-    const workout = this.getWorkoutById(workoutId);
-    if (!workout) {
-      return null;
-    }
-
-    const exercise = workout.exercises.find(exercise => exercise.id === exerciseId);
-    if (!exercise) {
+  async addSetToExercise(workoutId: string, exerciseId: string, setData: Set) {
+    const [exercise] = await this.db
+      .select({ sets: exercises.sets })
+      .from(exercises)
+      .where(eq(exercises.id, parseInt(exerciseId)));
+    if (!exercise?.sets) {
       return null;
     }
 
     exercise.sets.push(setData);
-    return workout;
+    return this.db
+      .update(exercises)
+      .set(exercise)
+      .where(eq(exercises.id, parseInt(exerciseId)))
+      .returning({ resourceId: exercises.resourceId });
   }
 
-  updateSet(workoutId: string, exerciseId: string, setIndex: number, setData: Partial<Set>): Workout | null {
-    const workout = this.getWorkoutById(workoutId);
-    if (!workout) {
-      return null;
-    }
-
-    const exercise = workout.exercises.find(exercise => exercise.id === exerciseId);
-    if (!exercise || setIndex < 0 || setIndex >= exercise.sets.length) {
+  async updateSet(
+    workoutId: string,
+    exerciseId: string,
+    setIndex: number,
+    setData: Partial<Set>
+  ) {
+    const [exercise] = await this.db
+      .select({ sets: exercises.sets })
+      .from(exercises)
+      .where(eq(exercises.id, parseInt(exerciseId)));
+    if (!exercise?.sets || setIndex < 0 || setIndex >= exercise.sets.length) {
       return null;
     }
 
@@ -120,21 +144,44 @@ export class WorkoutService {
       ...setData,
     };
 
-    return workout;
+    return this.db
+      .update(exercises)
+      .set(exercise)
+      .where(eq(exercises.id, parseInt(exerciseId)))
+      .returning({ resourceId: exercises.resourceId });
   }
 
-  deleteSet(workoutId: string, exerciseId: string, setIndex: number): Workout | null {
-    const workout = this.getWorkoutById(workoutId);
-    if (!workout) {
-      return null;
-    }
-
-    const exercise = workout.exercises.find(exercise => exercise.id === exerciseId);
-    if (!exercise || setIndex < 0 || setIndex >= exercise.sets.length) {
+  async deleteSet(workoutId: string, exerciseId: string, setIndex: number) {
+    const [exercise] = await this.db
+      .select({ sets: exercises.sets })
+      .from(exercises)
+      .where(eq(exercises.id, parseInt(exerciseId)));
+    if (!exercise?.sets || setIndex < 0 || setIndex >= exercise.sets.length) {
       return null;
     }
 
     exercise.sets.splice(setIndex, 1);
-    return workout;
+    return this.db
+      .update(exercises)
+      .set(exercise)
+      .where(eq(exercises.id, parseInt(exerciseId)))
+      .returning({ resourceId: exercises.resourceId });
+  }
+
+  private combineWorkoutsAndExercises(rows: { workout: any; exercise: any }[]) {
+    const allWorkouts = rows.reduce<Record<number, any>>((acc, row) => {
+      const { workout, exercise } = row;
+
+      if (!acc[workout.id]) {
+        acc[workout.id] = { ...workout, exercises: [] };
+      }
+
+      if (exercise) {
+        acc[workout.id].exercises.push(exercise);
+      }
+
+      return acc;
+    }, {});
+    return Object.values(allWorkouts);
   }
 }

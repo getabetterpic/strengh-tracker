@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1751701247250,
+      "tag": "0000_strange_union_jack",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1751711525970,
+      "tag": "0001_acoustic_black_bolt",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1751711617076,
+      "tag": "0002_nervous_metal_master",
+      "breakpoints": true
+    }
+  ]
+}

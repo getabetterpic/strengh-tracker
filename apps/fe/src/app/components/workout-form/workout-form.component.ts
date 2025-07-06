@@ -1,7 +1,13 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
-import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormBuilder,
+  FormGroup,
+  FormArray,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { WorkoutService } from '../../services/workout.service';
 import { Workout, Exercise, Set } from '@strength-tracker/util';
 
@@ -24,7 +30,7 @@ export class WorkoutFormComponent implements OnInit {
   ngOnInit(): void {
     this.initForm();
 
-    this.route.params.subscribe(params => {
+    this.route.params.subscribe((params) => {
       if (params['id'] && params['id'] !== 'new') {
         this.isEditMode = true;
         this.workoutId = params['id'];
@@ -41,7 +47,7 @@ export class WorkoutFormComponent implements OnInit {
       date: [new Date().toISOString().split('T')[0], Validators.required],
       notes: [''],
       exercises: this.fb.array([]),
-      completed: [false]
+      completedAt: [''],
     });
   }
 
@@ -49,14 +55,16 @@ export class WorkoutFormComponent implements OnInit {
     this.workoutService.getWorkoutById(id).subscribe({
       next: (workout) => {
         // Format date for the date input
-        const formattedDate = new Date(workout.date).toISOString().split('T')[0];
+        const formattedDate = new Date(workout.date)
+          .toISOString()
+          .split('T')[0];
 
         // Update form with workout data
         this.workoutForm.patchValue({
           name: workout.name,
           date: formattedDate,
           notes: workout.notes || '',
-          completed: workout.completed
+          completedAt: workout.completedAt,
         });
 
         // Clear existing exercises
@@ -65,30 +73,32 @@ export class WorkoutFormComponent implements OnInit {
         }
 
         // Add exercises from the workout
-        workout.exercises.forEach(exercise => {
+        workout.exercises.forEach((exercise) => {
           const exerciseGroup = this.fb.group({
             id: [exercise.id],
             name: [exercise.name, Validators.required],
-            sets: this.fb.array([])
+            sets: this.fb.array([]),
           });
 
           this.exercisesFormArray.push(exerciseGroup);
 
           // Add sets to the exercise
           const setsArray = exerciseGroup.get('sets') as FormArray;
-          exercise.sets.forEach(set => {
-            setsArray.push(this.fb.group({
-              reps: [set.reps, [Validators.required, Validators.min(1)]],
-              weight: [set.weight, [Validators.required, Validators.min(0)]],
-              completed: [set.completed]
-            }));
+          exercise.sets.forEach((set) => {
+            setsArray.push(
+              this.fb.group({
+                reps: [set.reps, [Validators.required, Validators.min(1)]],
+                weight: [set.weight, [Validators.required, Validators.min(0)]],
+                completed: [set.completed],
+              })
+            );
           });
         });
       },
       error: (error) => {
         console.error('Error loading workout', error);
         this.router.navigate(['/workouts']);
-      }
+      },
     });
   }
 
@@ -103,7 +113,7 @@ export class WorkoutFormComponent implements OnInit {
   addExercise(): void {
     const exerciseGroup = this.fb.group({
       name: ['', Validators.required],
-      sets: this.fb.array([])
+      sets: this.fb.array([]),
     });
 
     this.exercisesFormArray.push(exerciseGroup);
@@ -115,11 +125,13 @@ export class WorkoutFormComponent implements OnInit {
 
   addSet(exerciseIndex: number): void {
     const setsArray = this.getSetsFormArray(exerciseIndex);
-    setsArray.push(this.fb.group({
-      reps: [10, [Validators.required, Validators.min(1)]],
-      weight: [0, [Validators.required, Validators.min(0)]],
-      completed: [false]
-    }));
+    setsArray.push(
+      this.fb.group({
+        reps: [10, [Validators.required, Validators.min(1)]],
+        weight: [0, [Validators.required, Validators.min(0)]],
+        completed: [false],
+      })
+    );
   }
 
   removeSet(exerciseIndex: number, setIndex: number): void {
@@ -135,10 +147,10 @@ export class WorkoutFormComponent implements OnInit {
     const formValue = this.workoutForm.value;
     const workoutData: Partial<Workout> = {
       name: formValue.name,
-      date: new Date(formValue.date),
+      date: new Date(formValue.date).toISOString().slice(0, 10),
       notes: formValue.notes,
       exercises: formValue.exercises,
-      completed: formValue.completed
+      completedAt: formValue.completedAt || null,
     };
 
     if (this.isEditMode && this.workoutId) {
@@ -148,17 +160,19 @@ export class WorkoutFormComponent implements OnInit {
         },
         error: (error) => {
           console.error('Error updating workout', error);
-        }
+        },
       });
     } else {
-      this.workoutService.createWorkout(workoutData as Omit<Workout, 'id'>).subscribe({
-        next: () => {
-          this.router.navigate(['/workouts']);
-        },
-        error: (error) => {
-          console.error('Error creating workout', error);
-        }
-      });
+      this.workoutService
+        .createWorkout(workoutData as Omit<Workout, 'id'>)
+        .subscribe({
+          next: () => {
+            this.router.navigate(['/workouts']);
+          },
+          error: (error) => {
+            console.error('Error creating workout', error);
+          },
+        });
     }
   }
 
