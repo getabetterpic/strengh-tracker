@@ -100,7 +100,7 @@ export class WorkoutService {
       .returning({ resourceId: exercises.resourceId });
   }
 
-  deleteExercise(workoutId: string, exerciseId: string) {
+  async deleteExercise(workoutId: string, exerciseId: string) {
     return this.db
       .delete(exercises)
       .where(eq(exercises.id, parseInt(exerciseId)))
