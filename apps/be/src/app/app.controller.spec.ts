@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DATABASE } from '@strength-tracker/db';
-import { BadRequestException } from '@nestjs/common';
+import { InternalServerErrorException } from '@nestjs/common';
 
 describe('AppController', () => {
   let app: TestingModule;
@@ -39,7 +39,9 @@ describe('AppController', () => {
           await appController.healthCheck();
           expect(true).toEqual(false); // should not get here
         } catch (e) {
-          expect(e).toEqual(new BadRequestException({ postgres: false }));
+          expect(e).toEqual(
+            new InternalServerErrorException({ postgres: false })
+          );
         }
       });
     });
