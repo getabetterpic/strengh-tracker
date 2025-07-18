@@ -6,6 +6,7 @@ import {
   pgTable,
   serial,
   text,
+  timestamp,
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core';
@@ -17,6 +18,32 @@ interface Set {
   weight: number;
   completed: boolean;
 }
+
+export const users = pgTable(
+  'users',
+  {
+    id: serial('id').primaryKey(),
+    resourceId: varchar('resource_id')
+      .notNull()
+      .unique()
+      .$defaultFn(() => ksuid.randomSync().string),
+    email: varchar().notNull().unique(),
+    passwordDigest: varchar('password_digest'),
+    phoneNumber: varchar('phone_number'),
+    name: varchar(),
+    otpSecret: varchar('otp_secret'),
+    preferences: jsonb().$defaultFn(() => []),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at')
+      .notNull()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex('users_on_resource_id_idx').on(table.resourceId),
+    uniqueIndex('users_on_email_idx').on(table.email),
+    index('users_on_phone_number_idx').on(table.phoneNumber),
+  ]
+);
 
 export const workouts = pgTable(
   'workouts',
@@ -30,12 +57,14 @@ export const workouts = pgTable(
     name: varchar('name').notNull(),
     notes: text('notes'),
     completedAt: date('completed_at'),
+    userId: integer('user_id'),
   },
   (table) => [uniqueIndex('resource_id_idx').on(table.resourceId)]
 );
 
-export const workoutRelations = relations(workouts, ({ many }) => ({
+export const workoutRelations = relations(workouts, ({ one, many }) => ({
   exercises: many(exercises),
+  user: one(users),
 }));
 
 export const exercises = pgTable(
