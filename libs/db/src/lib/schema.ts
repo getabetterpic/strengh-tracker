@@ -95,3 +95,5 @@ export const exerciseRelations = relations(exercises, ({ one }) => ({
 }));
 
 export type SelectWorkout = typeof workouts.$inferSelect;
+export type SelectUser = typeof users.$inferSelect;
+export type InsertUser = typeof users.$inferInsert;

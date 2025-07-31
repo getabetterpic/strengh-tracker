@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Workout, Exercise, Set } from '@strength-tracker/util';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { DATABASE, workouts, exercises } from '@strength-tracker/db';
-import { eq } from 'drizzle-orm';
+import { DATABASE, workouts, exercises, users } from '@strength-tracker/db';
+import { eq, and } from 'drizzle-orm';
 
 @Injectable()
 export class WorkoutService {
@@ -10,26 +10,31 @@ export class WorkoutService {
 
   constructor(@Inject(DATABASE) private db: NodePgDatabase) {}
 
-  async getAllWorkouts() {
+  async getAllWorkouts(userId: string) {
     const rows = await this.db
       .select({
         workout: workouts,
         exercise: exercises,
       })
       .from(workouts)
-      .leftJoin(exercises, eq(workouts.id, exercises.workoutId));
+      .innerJoin(users, eq(workouts.userId, users.id))
+      .leftJoin(exercises, eq(workouts.id, exercises.workoutId))
+      .where(eq(users.resourceId, userId));
     return this.combineWorkoutsAndExercises(rows);
   }
 
-  async getWorkoutById(id: string) {
+  async getWorkoutById(id: string, userId: string) {
     const rows = await this.db
       .select({
         workout: workouts,
         exercise: exercises,
       })
       .from(workouts)
+      .innerJoin(users, eq(workouts.userId, users.id))
       .leftJoin(exercises, eq(workouts.id, exercises.workoutId))
-      .where(eq(workouts.id, parseInt(id, 10)));
+      .where(
+        and(eq(workouts.id, parseInt(id, 10)), eq(users.resourceId, userId))
+      );
     return this.combineWorkoutsAndExercises(rows);
   }
 
