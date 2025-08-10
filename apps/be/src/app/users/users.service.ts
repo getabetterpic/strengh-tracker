@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { DATABASE, users } from '@strength-tracker/db';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { CreateUsersDTO, LoginUserDto } from '@strength-tracker/util';
+import { CreateUsersDTO, LoginUserDto, UpdateUserPreferencesDTO } from '@strength-tracker/util';
 import bcrypt from 'bcrypt';
 import { eq } from 'drizzle-orm';
 
@@ -53,5 +53,31 @@ export class UsersService {
       throw new NotFoundException();
     }
     return user;
+  }
+
+  async updatePreferences(userId: string, preferences: UpdateUserPreferencesDTO) {
+    try {
+      const [user] = await this.db
+        .update(users)
+        .set({
+          preferences: preferences,
+        })
+        .where(eq(users.resourceId, userId))
+        .returning({
+          resourceId: users.resourceId,
+          email: users.email,
+          name: users.name,
+          phoneNumber: users.phoneNumber,
+          preferences: users.preferences,
+        });
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      return user;
+    } catch (e) {
+      throw new BadRequestException(e);
+    }
   }
 }

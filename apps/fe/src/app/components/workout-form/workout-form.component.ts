@@ -9,12 +9,14 @@ import {
   Validators,
 } from '@angular/forms';
 import { WorkoutService } from '../../services/workout.service';
-import { Workout, Exercise, Set } from '@strength-tracker/util';
+import { Workout, Exercise, Set, WeightUnit } from '@strength-tracker/util';
+import { PreferencesService } from '../../services/preferences/preferences.service';
+import { WeightUnitSelectorComponent } from '../weight-unit-selector/weight-unit-selector.component';
 
 @Component({
   selector: 'app-workout-form',
   standalone: true,
-  imports: [CommonModule, RouterModule, ReactiveFormsModule],
+  imports: [CommonModule, RouterModule, ReactiveFormsModule, WeightUnitSelectorComponent],
   templateUrl: './workout-form.component.html',
 })
 export class WorkoutFormComponent implements OnInit {
@@ -22,6 +24,10 @@ export class WorkoutFormComponent implements OnInit {
   private workoutService = inject(WorkoutService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private preferencesService = inject(PreferencesService);
+
+  // Expose weight unit to template
+  WeightUnit = WeightUnit;
 
   workoutForm!: FormGroup;
   isEditMode = false;
@@ -85,10 +91,13 @@ export class WorkoutFormComponent implements OnInit {
           // Add sets to the exercise
           const setsArray = exerciseGroup.get('sets') as FormArray;
           exercise.sets.forEach((set) => {
+            // Convert weight from kg to the current unit for display
+            const displayWeight = this.convertFromKg(set.weight);
+
             setsArray.push(
               this.fb.group({
                 reps: [set.reps, [Validators.required, Validators.min(1)]],
-                weight: [set.weight, [Validators.required, Validators.min(0)]],
+                weight: [displayWeight, [Validators.required, Validators.min(0)]],
                 completed: [set.completed],
               })
             );
@@ -145,11 +154,25 @@ export class WorkoutFormComponent implements OnInit {
     }
 
     const formValue = this.workoutForm.value;
+
+    // Convert weights from current unit to kg for storage
+    const exercises = formValue.exercises.map((exercise: any) => {
+      return {
+        ...exercise,
+        sets: exercise.sets.map((set: any) => {
+          return {
+            ...set,
+            weight: this.convertToKg(set.weight)
+          };
+        })
+      };
+    });
+
     const workoutData: Partial<Workout> = {
       name: formValue.name,
       date: new Date(formValue.date).toISOString().slice(0, 10),
       notes: formValue.notes,
-      exercises: formValue.exercises,
+      exercises: exercises,
       completedAt: formValue.completedAt || null,
     };
 
@@ -178,5 +201,37 @@ export class WorkoutFormComponent implements OnInit {
 
   goBack(): void {
     this.router.navigate(['/workouts']);
+  }
+
+  // Get the current weight unit
+  getCurrentWeightUnit(): WeightUnit {
+    return this.preferencesService.getWeightUnit();
+  }
+
+  // Convert weight from the current unit to kg for storage
+  convertToKg(weight: number): number {
+    const currentUnit = this.getCurrentWeightUnit();
+    if (currentUnit === WeightUnit.KG) {
+      return weight;
+    }
+    // Convert from lbs to kg
+    return this.preferencesService.convertWeight(weight, WeightUnit.LBS, WeightUnit.KG);
+  }
+
+  // Convert weight from kg to the current unit for display
+  convertFromKg(weight: number): number {
+    const currentUnit = this.getCurrentWeightUnit();
+    if (currentUnit === WeightUnit.KG) {
+      return weight;
+    }
+    // Convert from kg to lbs
+    return this.preferencesService.convertWeight(weight, WeightUnit.KG, WeightUnit.LBS);
+  }
+
+  // Format weight with the appropriate unit
+  formatWeight(weight: number): string {
+    const currentUnit = this.getCurrentWeightUnit();
+    const convertedWeight = this.convertFromKg(weight);
+    return `${convertedWeight.toFixed(1)} ${currentUnit}`;
   }
 }

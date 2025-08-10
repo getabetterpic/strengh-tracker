@@ -2,8 +2,10 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { WorkoutService } from '../../services/workout.service';
-import { Exercise, Workout } from '@strength-tracker/util';
+import { Exercise, Workout, WeightUnit } from '@strength-tracker/util';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { PreferencesService } from '../../services/preferences/preferences.service';
+import { WeightUnitSelectorComponent } from '../weight-unit-selector/weight-unit-selector.component';
 import {
   BehaviorSubject,
   catchError,
@@ -18,14 +20,18 @@ import {
 @Component({
   selector: 'app-workout-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, WeightUnitSelectorComponent],
   templateUrl: './workout-detail.component.html',
 })
 export class WorkoutDetailComponent {
   private workoutService = inject(WorkoutService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private preferencesService = inject(PreferencesService);
   private updateWorkoutTrigger$ = new BehaviorSubject<void>(undefined);
+
+  // Expose weight unit to template
+  WeightUnit = WeightUnit;
 
   loading = signal(true);
   workout$ = combineLatest([
@@ -80,5 +86,25 @@ export class WorkoutDetailComponent {
         },
       });
     }
+  }
+
+  // Format weight with the current unit preference
+  formatWeight(weight: number): string {
+    const currentUnit = this.preferencesService.getWeightUnit();
+
+    // Convert from kg (stored value) to the preferred unit
+    const convertedWeight = this.preferencesService.convertWeight(
+      weight,
+      WeightUnit.KG,
+      currentUnit
+    );
+
+    // Format with 1 decimal place and the unit
+    return `${convertedWeight.toFixed(1)} ${currentUnit}`;
+  }
+
+  // Get the current weight unit
+  getCurrentWeightUnit(): WeightUnit {
+    return this.preferencesService.getWeightUnit();
   }
 }
