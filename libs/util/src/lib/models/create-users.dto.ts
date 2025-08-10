@@ -5,7 +5,8 @@ import {
   IsNumberString,
   IsOptional,
   IsPhoneNumber,
-  IsString, MinLength
+  IsString,
+  MinLength,
 } from 'class-validator';
 
 export class CreateUsersDTO implements InsertUser {
@@ -28,6 +29,7 @@ export class CreateUsersDTO implements InsertUser {
   @IsPhoneNumber('US')
   phoneNumber?: string | null | undefined;
 
+  @IsOptional()
   @IsArray()
   preferences?: unknown[];
 }
