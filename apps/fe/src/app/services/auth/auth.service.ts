@@ -38,7 +38,7 @@ export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
 
-  private currentUserSubject = new Subject<User | null>();
+  private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
   public currentUser = toSignal(this.currentUser$, { requireSync: true });
 
@@ -118,7 +118,8 @@ export class AuthService {
   private handleSuccessfulLogin(response: LoginResponse): void {
     console.log({ response });
     localStorage.setItem(this.tokenKey, response.token);
-    this.currentUserSubject.next(response.user);
+    console.log({ jwt: this.parseJwt(response.token) });
+    this.currentUserSubject.next(this.parseJwt(response.token));
   }
 
   logout(): void {
