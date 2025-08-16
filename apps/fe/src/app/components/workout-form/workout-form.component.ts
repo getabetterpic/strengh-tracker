@@ -16,7 +16,12 @@ import { WeightUnitSelectorComponent } from '../weight-unit-selector/weight-unit
 @Component({
   selector: 'app-workout-form',
   standalone: true,
-  imports: [CommonModule, RouterModule, ReactiveFormsModule, WeightUnitSelectorComponent],
+  imports: [
+    CommonModule,
+    RouterModule,
+    ReactiveFormsModule,
+    WeightUnitSelectorComponent,
+  ],
   templateUrl: './workout-form.component.html',
 })
 export class WorkoutFormComponent implements OnInit {
@@ -53,7 +58,7 @@ export class WorkoutFormComponent implements OnInit {
       date: [new Date().toISOString().split('T')[0], Validators.required],
       notes: [''],
       exercises: this.fb.array([]),
-      completedAt: [''],
+      completed: [false],
     });
   }
 
@@ -97,7 +102,10 @@ export class WorkoutFormComponent implements OnInit {
             setsArray.push(
               this.fb.group({
                 reps: [set.reps, [Validators.required, Validators.min(1)]],
-                weight: [displayWeight, [Validators.required, Validators.min(0)]],
+                weight: [
+                  displayWeight,
+                  [Validators.required, Validators.min(0)],
+                ],
                 completed: [set.completed],
               })
             );
@@ -162,9 +170,9 @@ export class WorkoutFormComponent implements OnInit {
         sets: exercise.sets.map((set: any) => {
           return {
             ...set,
-            weight: this.convertToKg(set.weight)
+            weight: this.convertToKg(set.weight),
           };
-        })
+        }),
       };
     });
 
@@ -215,7 +223,11 @@ export class WorkoutFormComponent implements OnInit {
       return weight;
     }
     // Convert from lbs to kg
-    return this.preferencesService.convertWeight(weight, WeightUnit.LBS, WeightUnit.KG);
+    return this.preferencesService.convertWeight(
+      weight,
+      WeightUnit.LBS,
+      WeightUnit.KG
+    );
   }
 
   // Convert weight from kg to the current unit for display
@@ -225,7 +237,11 @@ export class WorkoutFormComponent implements OnInit {
       return weight;
     }
     // Convert from kg to lbs
-    return this.preferencesService.convertWeight(weight, WeightUnit.KG, WeightUnit.LBS);
+    return this.preferencesService.convertWeight(
+      weight,
+      WeightUnit.KG,
+      WeightUnit.LBS
+    );
   }
 
   // Format weight with the appropriate unit

@@ -38,8 +38,11 @@ export class WorkoutController {
   }
 
   @Post()
-  async createWorkout(@Body() workoutData: Omit<Workout, 'id'>) {
-    return this.workoutService.createWorkout(workoutData);
+  async createWorkout(
+    @Body() workoutData: Omit<Workout, 'id'>,
+    @Request() req: ExpRequest
+  ) {
+    return this.workoutService.createWorkout(workoutData, req.user.sub);
   }
 
   @Put(':id')

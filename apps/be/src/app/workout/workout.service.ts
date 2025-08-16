@@ -38,10 +38,17 @@ export class WorkoutService {
     return this.combineWorkoutsAndExercises(rows);
   }
 
-  async createWorkout(workoutData: Omit<Workout, 'id'>) {
-    return this.db.insert(workouts).values(workoutData).returning({
-      resourceId: workouts.resourceId,
-    });
+  async createWorkout(workoutData: Omit<Workout, 'id'>, userSub: string) {
+    const [user] = await this.db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.resourceId, userSub));
+    return this.db
+      .insert(workouts)
+      .values({ ...workoutData, userId: user.id })
+      .returning({
+        resourceId: workouts.resourceId,
+      });
   }
 
   async updateWorkout(workoutId: string, workoutData: Partial<Workout>) {

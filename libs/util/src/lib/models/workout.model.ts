@@ -1,21 +1,47 @@
-export interface Exercise {
-  id: string;
-  name: string;
-  sets: Set[];
-  workoutId: string;
+import {
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+
+export class Exercise {
+  id?: string;
+  @IsString()
+  name!: string;
+  @IsArray()
+  sets!: Set[];
+  @IsString()
+  @IsOptional()
+  workoutId!: string;
 }
 
-export interface Set {
-  reps: number;
-  weight: number;
-  completed: boolean;
+export class Set {
+  @IsNumber()
+  reps!: number;
+  @IsNumber()
+  weight!: number;
+  @IsBoolean()
+  completed!: boolean;
 }
 
-export interface Workout {
-  id: string;
-  date: string;
-  name: string;
-  exercises: Exercise[];
+export class Workout {
+  id?: string;
+  @IsDateString()
+  date!: string;
+  @IsString()
+  name!: string;
+
+  @IsArray()
+  exercises!: Exercise[];
+
+  @IsString()
+  @IsOptional()
   notes?: string;
-  completedAt: string;
+
+  @IsDateString()
+  @IsOptional()
+  completedAt?: string;
 }
