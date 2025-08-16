@@ -15,6 +15,11 @@ async function bootstrap() {
       transform: true,
     })
   );
+  // Enable CORS for cookie-based auth if FE is served from a different origin
+  app.enableCors({
+    origin: true, // reflect request origin
+    credentials: true,
+  });
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
   const port = process.env.PORT || 3000;

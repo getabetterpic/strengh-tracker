@@ -1,8 +1,8 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, of, Subject, throwError } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
-import { Router } from '@angular/router';
+import { BehaviorSubject, Observable, throwError } from 'rxjs';
+import { catchError, switchMap, tap } from 'rxjs/operators';
+import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 interface JwtPayloadUser {
@@ -14,7 +14,7 @@ interface JwtPayloadUser {
 }
 
 interface LoginResponse {
-  token: string;
+  ok: boolean;
   requiresMfa?: boolean;
 }
 
@@ -26,7 +26,7 @@ interface RegisterRequest {
 }
 
 interface RegisterResponse {
-  token: string;
+  ok: boolean;
 }
 
 @Injectable({
@@ -40,46 +40,20 @@ export class AuthService {
   public currentUser$ = this.currentUserSubject.asObservable();
   public currentUser = toSignal(this.currentUser$, { requireSync: true });
 
-  private tokenKey = 'auth_token';
   private apiUrl = '/api'; // Adjust based on your API endpoint
 
   constructor() {
-    this.loadUserFromStorage();
+    // Try to fetch the current user from cookie-based session on startup
+    this.fetchMe().subscribe({
+      next: (user) => this.currentUserSubject.next(user),
+      error: () => this.currentUserSubject.next(null),
+    });
   }
 
-  private loadUserFromStorage(): void {
-    const token = localStorage.getItem(this.tokenKey);
-    if (token) {
-      try {
-        const payload = this.parseJwt(token) as JwtPayloadUser | null;
-        if (payload && payload.email && payload.sub) {
-          this.currentUserSubject.next(payload);
-        } else {
-          // Invalid payload
-          localStorage.removeItem(this.tokenKey);
-          this.currentUserSubject.next(null);
-        }
-      } catch (error) {
-        localStorage.removeItem(this.tokenKey);
-        this.currentUserSubject.next(null);
-      }
-    }
-  }
-
-  private parseJwt(token: string): unknown {
-    try {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const json = decodeURIComponent(
-        atob(base64)
-          .split('')
-          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-          .join('')
-      );
-      return JSON.parse(json);
-    } catch (e) {
-      return null;
-    }
+  private fetchMe(): Observable<JwtPayloadUser> {
+    return this.http.get<JwtPayloadUser>(`${this.apiUrl}/auth/me`, {
+      withCredentials: true,
+    });
   }
 
   login(identifier: string, password: string): Observable<LoginResponse> {
@@ -91,12 +65,28 @@ export class AuthService {
       : { phoneNumber: identifier, password };
 
     return this.http
-      .post<LoginResponse>(`${this.apiUrl}/auth/login`, payload)
+      .post<LoginResponse>(`${this.apiUrl}/auth/login`, payload, {
+        withCredentials: true,
+      })
       .pipe(
-        tap((response) => {
-          if (!response.requiresMfa) {
-            this.handleSuccessfulLogin(response);
+        switchMap((response) => {
+          if (response.requiresMfa) {
+            return new Observable<LoginResponse>((observer) => {
+              observer.next(response);
+              observer.complete();
+            });
           }
+          // After login, fetch current user using the cookie
+          return this.fetchMe().pipe(
+            tap((user) => this.currentUserSubject.next(user)),
+            switchMap(
+              () =>
+                new Observable<LoginResponse>((observer) => {
+                  observer.next(response);
+                  observer.complete();
+                })
+            )
+          );
         }),
         catchError((error) => {
           return throwError(
@@ -107,11 +97,22 @@ export class AuthService {
   }
 
   verifyMfa(otpCode: string): Observable<LoginResponse> {
+    // Placeholder: adjust if MFA is implemented with cookies
     return this.http
-      .post<LoginResponse>(`${this.apiUrl}/verify-mfa`, { otpCode })
+      .post<LoginResponse>(
+        `${this.apiUrl}/verify-mfa`,
+        { otpCode },
+        {
+          withCredentials: true,
+        }
+      )
       .pipe(
-        tap((response) => {
-          this.handleSuccessfulLogin(response);
+        tap(() => {
+          // After MFA success, refetch user
+          this.fetchMe().subscribe({
+            next: (user) => this.currentUserSubject.next(user),
+            error: () => this.currentUserSubject.next(null),
+          });
         }),
         catchError((error) => {
           return throwError(
@@ -121,28 +122,28 @@ export class AuthService {
       );
   }
 
-  private handleSuccessfulLogin(response: LoginResponse): void {
-    console.log({ response });
-    localStorage.setItem(this.tokenKey, response.token);
-    console.log({ jwt: this.parseJwt(response.token) });
-    this.currentUserSubject.next(
-      this.parseJwt(response.token) as JwtPayloadUser
-    );
-  }
-
   logout(): void {
-    localStorage.removeItem(this.tokenKey);
-    this.currentUserSubject.next(null);
-    this.router.navigate(['/login']);
+    this.http
+      .post(`${this.apiUrl}/auth/logout`, {}, { withCredentials: true })
+      .subscribe({
+        complete: () => {
+          this.currentUserSubject.next(null);
+          this.router.navigate(['/login']);
+        },
+        error: () => {
+          this.currentUserSubject.next(null);
+          this.router.navigate(['/login']);
+        },
+      });
   }
 
   isLoggedIn(): boolean {
-    console.log({ currentUser: this.currentUser() });
     return this.currentUser() != null;
   }
 
+  // Token is no longer available in frontend with HttpOnly cookie
   getToken(): string | null {
-    return localStorage.getItem(this.tokenKey);
+    return null;
   }
 
   register(
@@ -159,8 +160,17 @@ export class AuthService {
     };
 
     return this.http
-      .post<RegisterResponse>(`${this.apiUrl}/auth/register`, payload)
+      .post<RegisterResponse>(`${this.apiUrl}/auth/register`, payload, {
+        withCredentials: true,
+      })
       .pipe(
+        tap(() => {
+          // After register, fetch current user
+          this.fetchMe().subscribe({
+            next: (user) => this.currentUserSubject.next(user),
+            error: () => this.currentUserSubject.next(null),
+          });
+        }),
         catchError((error) => {
           return throwError(
             () => new Error(error.error?.message || 'Registration failed')

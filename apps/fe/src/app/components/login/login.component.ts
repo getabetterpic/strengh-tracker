@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, effect, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormBuilder,
@@ -8,6 +8,8 @@ import {
 } from '@angular/forms';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth/auth.service';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { map } from 'rxjs';
 
 @Component({
   selector: 'app-login',
@@ -27,14 +29,23 @@ export class LoginComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private authService = inject(AuthService);
 
-  private returnUrl = '/workouts';
+  private returnUrl = toSignal(
+    this.route.queryParamMap.pipe(
+      map((queryParams) => queryParams.get('returnUrl'))
+    ),
+    { initialValue: '/workouts' }
+  );
+
+  constructor() {
+    effect(() => {
+      if (this.authService.currentUser()) {
+        this.router.navigate([this.returnUrl()]);
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.initForm();
-
-    // Get return url from route parameters or default to '/workouts'
-    this.returnUrl =
-      this.route.snapshot.queryParams['returnUrl'] || '/workouts';
   }
 
   initForm(): void {

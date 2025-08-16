@@ -16,12 +16,7 @@ import { WeightUnitSelectorComponent } from '../weight-unit-selector/weight-unit
 @Component({
   selector: 'app-workout-form',
   standalone: true,
-  imports: [
-    CommonModule,
-    RouterModule,
-    ReactiveFormsModule,
-    WeightUnitSelectorComponent,
-  ],
+  imports: [CommonModule, RouterModule, ReactiveFormsModule],
   templateUrl: './workout-form.component.html',
 })
 export class WorkoutFormComponent implements OnInit {

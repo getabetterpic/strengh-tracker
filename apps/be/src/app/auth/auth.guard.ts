@@ -24,7 +24,7 @@ export class AuthGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest();
-    const token = this.extractTokenFromHeader(request);
+    const token = this.extractToken(request);
     if (!token) {
       throw new UnauthorizedException();
     }
@@ -38,7 +38,20 @@ export class AuthGuard implements CanActivate {
     return true;
   }
 
-  private extractTokenFromHeader(request: Request): string | undefined {
+  private extractToken(request: Request): string | undefined {
+    // Prefer HttpOnly cookie
+    const cookieHeader = request.headers.cookie;
+    if (cookieHeader) {
+      const cookies = Object.fromEntries(
+        cookieHeader.split(';').map((c) => {
+          const [k, ...v] = c.trim().split('=');
+          return [decodeURIComponent(k), decodeURIComponent(v.join('='))];
+        })
+      );
+      const tokenFromCookie = cookies['auth_token'];
+      if (tokenFromCookie) return tokenFromCookie;
+    }
+    // Fallback to Authorization header (for backward compat or tools)
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;
   }
