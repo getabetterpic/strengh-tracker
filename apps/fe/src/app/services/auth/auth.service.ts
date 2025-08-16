@@ -5,16 +5,15 @@ import { catchError, map, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 
-interface User {
-  id: number;
-  resourceId: string;
+interface JwtPayloadUser {
+  sub: string; // resourceId
   email: string;
   name?: string;
-  phoneNumber?: string;
+  iat?: number;
+  exp?: number;
 }
 
 interface LoginResponse {
-  user: User;
   token: string;
   requiresMfa?: boolean;
 }
@@ -27,8 +26,7 @@ interface RegisterRequest {
 }
 
 interface RegisterResponse {
-  success: boolean;
-  message: string;
+  token: string;
 }
 
 @Injectable({
@@ -38,7 +36,7 @@ export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
 
-  private currentUserSubject = new BehaviorSubject<User | null>(null);
+  private currentUserSubject = new BehaviorSubject<JwtPayloadUser | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
   public currentUser = toSignal(this.currentUser$, { requireSync: true });
 
@@ -53,10 +51,14 @@ export class AuthService {
     const token = localStorage.getItem(this.tokenKey);
     if (token) {
       try {
-        // In a real app, you might want to validate the token with the server
-        // or decode a JWT token to get user info
-        const userData = this.parseJwt(token);
-        this.currentUserSubject.next(userData.user);
+        const payload = this.parseJwt(token) as JwtPayloadUser | null;
+        if (payload && payload.email && payload.sub) {
+          this.currentUserSubject.next(payload);
+        } else {
+          // Invalid payload
+          localStorage.removeItem(this.tokenKey);
+          this.currentUserSubject.next(null);
+        }
       } catch (error) {
         localStorage.removeItem(this.tokenKey);
         this.currentUserSubject.next(null);
@@ -64,13 +66,17 @@ export class AuthService {
     }
   }
 
-  private parseJwt(token: string): any {
+  private parseJwt(token: string): unknown {
     try {
-      // This is a simple JWT parser for demonstration
-      // In production, use a proper JWT library
       const base64Url = token.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      return JSON.parse(window.atob(base64));
+      const json = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      return JSON.parse(json);
     } catch (e) {
       return null;
     }
@@ -119,7 +125,9 @@ export class AuthService {
     console.log({ response });
     localStorage.setItem(this.tokenKey, response.token);
     console.log({ jwt: this.parseJwt(response.token) });
-    this.currentUserSubject.next(this.parseJwt(response.token));
+    this.currentUserSubject.next(
+      this.parseJwt(response.token) as JwtPayloadUser
+    );
   }
 
   logout(): void {

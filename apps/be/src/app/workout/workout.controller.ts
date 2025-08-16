@@ -7,11 +7,9 @@ import {
   Body,
   Param,
   NotFoundException,
-  UseGuards,
   Request,
 } from '@nestjs/common';
 import { WorkoutService } from './workout.service';
-import { AuthGuard } from '../auth/auth.guard';
 import { Workout, Exercise, Set } from '@strength-tracker/util';
 import { Request as ExpRequest } from 'express';
 
@@ -19,7 +17,6 @@ import { Request as ExpRequest } from 'express';
 export class WorkoutController {
   constructor(private readonly workoutService: WorkoutService) {}
 
-  @UseGuards(AuthGuard)
   @Get()
   async getAllWorkouts(@Request() req: ExpRequest) {
     return this.workoutService.getAllWorkouts(req.user.sub);
