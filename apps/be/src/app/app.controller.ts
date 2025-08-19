@@ -6,11 +6,13 @@ import {
 } from '@nestjs/common';
 import { DATABASE } from '@strength-tracker/db';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { Public } from './auth/public';
 
 @Controller()
 export class AppController {
   constructor(@Inject(DATABASE) private readonly db: NodePgDatabase) {}
 
+  @Public()
   @Get('health-check')
   async healthCheck() {
     try {
