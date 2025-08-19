@@ -1,7 +1,0 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npx nx build backend",
-  "outputDirectory": "dist/apps/be",
-  "framework": "express",
-  "installCommand": "npm i"
-}
