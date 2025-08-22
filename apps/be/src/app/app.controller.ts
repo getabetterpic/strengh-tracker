@@ -16,8 +16,7 @@ export class AppController {
   @Get('health-check')
   async healthCheck() {
     try {
-      const result = await this.db.execute('SELECT 1=1;');
-      return { postgres: !!result.rowCount };
+      return { postgres: false };
     } catch (e) {
       const error =
         process.env.NODE_ENV === 'production'
