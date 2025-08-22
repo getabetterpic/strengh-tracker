@@ -9,7 +9,9 @@ export default defineConfig({
   dbCredentials: {
     url: process.env.DATABASE_URL,
     ssl: {
-      ca: readFileSync(path.join(__dirname, 'db-ca-certificate.crt')),
+      ca: readFileSync(
+        path.join(__dirname, 'db-ca-certificate.crt')
+      ).toString(),
     },
   },
 });
