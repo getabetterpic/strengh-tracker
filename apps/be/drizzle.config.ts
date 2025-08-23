@@ -2,6 +2,10 @@ import { defineConfig } from 'drizzle-kit';
 import { readFileSync } from 'node:fs';
 import * as path from 'node:path';
 
+const ca = readFileSync(
+  path.join(__dirname, 'db-ca-certificate.crt')
+).toString();
+
 export default defineConfig({
   out: './apps/be/db',
   schema: './libs/db/src/lib/schema.ts',
@@ -13,7 +17,7 @@ export default defineConfig({
     password: process.env.DATABASE_PASSWORD,
     database: process.env.DATABASE_NAME,
     ssl: {
-      ca: process.env.DATABASE_CA,
+      ca,
     },
   },
 });
