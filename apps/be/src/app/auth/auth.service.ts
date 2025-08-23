@@ -66,7 +66,7 @@ export class AuthService {
         token: await this.jwtService.signAsync(payload),
       };
     } catch (e) {
-      throw new InternalServerErrorException(e);
+      throw new InternalServerErrorException(e.message);
     }
   }
 }
